@@ -115,7 +115,7 @@ function getProductId(payload: LastlinkPayload): string | null {
     }
   }
   
-  // PRIORIDADE 2: Usar o ID da oferta se compatível com o formato esperado
+  // PRIORIDADE 2: Usar o ID da oferta se compatível com o formato esperado (código curto)
   if (payload.Data.Offer?.Id) {
     // Verificar se o ID da oferta parece ser um ID curto (por exemplo, apenas caracteres alfanuméricos)
     if (/^[A-Z0-9]{9}$/.test(payload.Data.Offer.Id)) {
@@ -127,16 +127,32 @@ function getProductId(payload: LastlinkPayload): string | null {
     }
   }
   
-  // PRIORIDADE 3: Tentar obter dos Subscriptions
+  // PRIORIDADE 3: Tentar obter dos Subscriptions (apenas se for um ID no formato curto)
   if (!productId && payload.Data.Subscriptions && payload.Data.Subscriptions.length > 0) {
-    productId = payload.Data.Subscriptions[0].ProductId
-    console.log('✅ ID do produto extraído de Subscriptions:', productId)
+    const subProductId = payload.Data.Subscriptions[0].ProductId
+    if (subProductId && /^[A-Z0-9]{9}$/.test(subProductId)) {
+      productId = subProductId
+      console.log('✅ ID do produto extraído de Subscriptions:', productId)
+    } else {
+      console.log('⚠️ ID do produto de Subscriptions não está no formato esperado:', subProductId)
+    }
   }
   
-  // PRIORIDADE 4: Tentar dos Products
+  // PRIORIDADE 4: Tentar dos Products (apenas se for um ID no formato curto)
   if (!productId && payload.Data.Products && payload.Data.Products.length > 0) {
-    productId = payload.Data.Products[0].Id
-    console.log('✅ ID do produto extraído de Products:', productId)
+    const prodId = payload.Data.Products[0].Id
+    if (prodId && /^[A-Z0-9]{9}$/.test(prodId)) {
+      productId = prodId
+      console.log('✅ ID do produto extraído de Products:', productId)
+    } else {
+      console.log('⚠️ ID do produto de Products não está no formato esperado:', prodId)
+    }
+  }
+  
+  // Se nenhum ID válido foi encontrado, usar o código padrão do plano mensal
+  if (!productId) {
+    productId = 'CC84FA160' // ID padrão do plano mensal
+    console.log('⚠️ Nenhum ID válido encontrado, usando ID padrão do plano mensal:', productId)
   }
   
   return productId
@@ -358,6 +374,7 @@ export async function POST(request: Request) {
                 .insert({
                   company_id: companyId,
                   subscription_id: subscriptionId,
+                  product_id: productId,
                   billing_interval: billingInterval,
                   status: 'active',
                   current_period_end: periodEnd
