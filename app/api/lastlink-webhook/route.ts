@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Tipos para os eventos da LastLink
 type LastlinkEvent = {
@@ -16,7 +16,7 @@ type LastlinkEvent = {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     
     // Obter o corpo da requisição
     const payload = await request.json() as LastlinkEvent
