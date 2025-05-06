@@ -1,0 +1,31 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type PlanTierEnum = "free" | "basic" | "pro"
+
+export interface Database {
+  public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      project_status_enum: 'orçamento' | 'aprovado' | 'em_andamento' | 'concluído' | 'cancelado'
+      payment_status_enum: 'aguardando' | 'parcial' | 'pago' | 'atrasado' | 'cancelado'
+      role_enum: 'admin' | 'collaborator' | 'client_viewer'
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
