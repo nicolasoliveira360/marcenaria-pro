@@ -414,12 +414,136 @@ export interface Database {
           },
         ]
       }
+      lastlink_events: {
+        Row: {
+          id: string
+          company_id: string
+          event_type: string
+          subscription_id: string | null
+          data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          event_type: string
+          subscription_id?: string | null
+          data?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          event_type?: string
+          subscription_id?: string | null
+          data?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lastlink_events_company_id_fkey"
+            columns: ["company_id"]
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lastlink_subscriptions: {
+        Row: {
+          id: string
+          company_id: string
+          subscription_id: string
+          billing_interval: string
+          status: string
+          current_period_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          subscription_id: string
+          billing_interval: string
+          status: string
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          subscription_id?: string
+          billing_interval?: string
+          status?: string
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lastlink_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lastlink_products: {
+        Row: {
+          product_id: string
+          billing_interval: string
+          created_at: string
+        }
+        Insert: {
+          product_id: string
+          billing_interval: string
+          created_at?: string
+        }
+        Update: {
+          product_id?: string
+          billing_interval?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      handle_lastlink_active: {
+        Args: {
+          p_company_id: string
+          p_sub_id: string
+          p_product_id: string
+          p_period_end: string | null
+        }
+        Returns: undefined
+      }
+      handle_lastlink_past_due: {
+        Args: {
+          p_company_id: string
+          p_sub_id: string
+          p_period_end: string | null
+        }
+        Returns: undefined
+      }
+      handle_lastlink_canceled: {
+        Args: {
+          p_company_id: string
+          p_sub_id: string
+          p_period_end: string | null
+        }
+        Returns: undefined
+      }
+      handle_lastlink_expired: {
+        Args: {
+          p_company_id: string
+          p_sub_id: string
+          p_period_end: string | null
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
