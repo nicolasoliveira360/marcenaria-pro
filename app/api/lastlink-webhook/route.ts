@@ -60,6 +60,8 @@ function mapLastlinkEventType(lastlinkEvent: string): string {
 // Função auxiliar para encontrar a empresa pelo e-mail
 async function findCompanyByEmail(supabase: any, email: string): Promise<string | null> {
   // Buscar empresa pelo email
+  console.log('🔍 Buscando empresa pelo e-mail:', email)
+  
   const { data: company, error } = await supabase
     .from('companies')
     .select('id')
@@ -71,12 +73,15 @@ async function findCompanyByEmail(supabase: any, email: string): Promise<string 
     return null
   }
   
+  console.log('✅ Empresa encontrada pelo e-mail:', company.id)
   return company.id
 }
 
-// Função auxiliar para encontrar a empresa pelo ID do produto
+// Função auxiliar para encontrar a empresa pelo ID da assinatura
 async function findCompanyBySubscriptionId(supabase: any, subscriptionId: string): Promise<string | null> {
   // Buscar empresa pelo ID da assinatura
+  console.log('🔍 Buscando empresa pelo ID da assinatura:', subscriptionId)
+  
   const { data: subscription, error } = await supabase
     .from('lastlink_subscriptions')
     .select('company_id')
@@ -88,6 +93,7 @@ async function findCompanyBySubscriptionId(supabase: any, subscriptionId: string
     return null
   }
   
+  console.log('✅ Empresa encontrada pelo ID da assinatura:', subscription.company_id)
   return subscription.company_id
 }
 
@@ -95,14 +101,7 @@ async function findCompanyBySubscriptionId(supabase: any, subscriptionId: string
 function getProductId(payload: LastlinkPayload): string | null {
   let productId = null
   
-  // PRIORIDADE 1: Usar o ID da oferta diretamente
-  if (payload.Data.Offer?.Id) {
-    productId = payload.Data.Offer.Id
-    console.log('✅ ID do produto extraído da Offer.Id:', productId)
-    return productId
-  }
-  
-  // PRIORIDADE 2: Extrair o ID do produto da URL da oferta
+  // PRIORIDADE 1: Extrair o ID do produto da URL da oferta
   if (payload.Data.Offer?.Url) {
     const url = payload.Data.Offer.Url
     // Extrair ID do produto da URL do Lastlink (https://lastlink.com/p/CC84FA160)
@@ -113,6 +112,18 @@ function getProductId(payload: LastlinkPayload): string | null {
       return productId
     } else {
       console.log('⚠️ Não foi possível extrair o ID do produto da URL:', url)
+    }
+  }
+  
+  // PRIORIDADE 2: Usar o ID da oferta se compatível com o formato esperado
+  if (payload.Data.Offer?.Id) {
+    // Verificar se o ID da oferta parece ser um ID curto (por exemplo, apenas caracteres alfanuméricos)
+    if (/^[A-Z0-9]{9}$/.test(payload.Data.Offer.Id)) {
+      productId = payload.Data.Offer.Id
+      console.log('✅ ID do produto extraído da Offer.Id (formato curto):', productId)
+      return productId
+    } else {
+      console.log('⚠️ ID da oferta não está no formato esperado:', payload.Data.Offer.Id)
     }
   }
   
@@ -290,11 +301,11 @@ export async function POST(request: Request) {
       
       // Registrar o evento no banco para auditoria
       const { error: logError } = await supabase.from('lastlink_events').insert({
-        event_id: eventId,
-        company_id: companyId,
         event_type: lastlinkEvent,
+        company_id: companyId,
         subscription_id: subscriptionId,
-        payload: payload
+        data: payload,
+        created_at: new Date().toISOString()
       })
       
       if (logError) {
@@ -326,6 +337,40 @@ export async function POST(request: Request) {
             }
             
             const periodEnd = payload.Data.Subscriptions?.[0]?.ExpiredDate || null
+            
+            // Verificar se já existe uma entrada para essa assinatura
+            const { data: existingSub, error: existingSubError } = await supabase
+              .from('lastlink_subscriptions')
+              .select('id')
+              .eq('subscription_id', subscriptionId)
+              .eq('company_id', companyId)
+              .single()
+            
+            if (existingSubError && !existingSubError.message.includes('No rows found')) {
+              console.error('❌ Erro ao verificar assinatura existente:', existingSubError)
+            }
+            
+            if (!existingSub) {
+              console.log('ℹ️ Assinatura não encontrada, criando nova entrada...')
+              // Inserir nova entrada na tabela lastlink_subscriptions para garantir a associação
+              const { error: insertError } = await supabase
+                .from('lastlink_subscriptions')
+                .insert({
+                  company_id: companyId,
+                  subscription_id: subscriptionId,
+                  billing_interval: billingInterval,
+                  status: 'active',
+                  current_period_end: periodEnd
+                })
+              
+              if (insertError) {
+                console.error('❌ Erro ao criar entrada na tabela lastlink_subscriptions:', insertError)
+              } else {
+                console.log('✅ Nova assinatura registrada com sucesso')
+              }
+            } else {
+              console.log('ℹ️ Assinatura já existente, atualizando status...')
+            }
             
             console.log('📤 Enviando para RPC handle_lastlink_active com parâmetros:', {
               p_company_id: companyId,
