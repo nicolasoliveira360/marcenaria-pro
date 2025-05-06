@@ -93,22 +93,42 @@ async function findCompanyBySubscriptionId(supabase: any, subscriptionId: string
 
 // Função auxiliar para obter o ID do produto
 function getProductId(payload: LastlinkPayload): string | null {
-  // Tentar obter dos Subscriptions
-  if (payload.Data.Subscriptions && payload.Data.Subscriptions.length > 0) {
-    return payload.Data.Subscriptions[0].ProductId
+  let productId = null
+  
+  // PRIORIDADE 1: Usar o ID da oferta diretamente
+  if (payload.Data.Offer?.Id) {
+    productId = payload.Data.Offer.Id
+    console.log('✅ ID do produto extraído da Offer.Id:', productId)
+    return productId
   }
   
-  // Tentar obter do Offer
-  if (payload.Data.Offer) {
+  // PRIORIDADE 2: Extrair o ID do produto da URL da oferta
+  if (payload.Data.Offer?.Url) {
     const url = payload.Data.Offer.Url
     // Extrair ID do produto da URL do Lastlink (https://lastlink.com/p/CC84FA160)
     const match = url.match(/\/p\/([A-Z0-9]+)/)
     if (match && match[1]) {
-      return match[1]
+      productId = match[1]
+      console.log('✅ ID do produto extraído da URL:', productId)
+      return productId
+    } else {
+      console.log('⚠️ Não foi possível extrair o ID do produto da URL:', url)
     }
   }
   
-  return null
+  // PRIORIDADE 3: Tentar obter dos Subscriptions
+  if (!productId && payload.Data.Subscriptions && payload.Data.Subscriptions.length > 0) {
+    productId = payload.Data.Subscriptions[0].ProductId
+    console.log('✅ ID do produto extraído de Subscriptions:', productId)
+  }
+  
+  // PRIORIDADE 4: Tentar dos Products
+  if (!productId && payload.Data.Products && payload.Data.Products.length > 0) {
+    productId = payload.Data.Products[0].Id
+    console.log('✅ ID do produto extraído de Products:', productId)
+  }
+  
+  return productId
 }
 
 // Função auxiliar para obter o ID da assinatura
@@ -118,6 +138,72 @@ function getSubscriptionId(payload: LastlinkPayload): string | null {
   }
   
   return null
+}
+
+// Função auxiliar para verificar se um produto existe na tabela lastlink_products
+async function verifyProductExists(supabase: any, productId: string): Promise<boolean> {
+  console.log('🔍 Verificando se o produto existe na tabela lastlink_products:', productId)
+  
+  const { data, error } = await supabase
+    .from('lastlink_products')
+    .select('product_id')
+    .eq('product_id', productId)
+    .single()
+  
+  if (error) {
+    console.error('❌ Erro ao verificar produto:', error)
+    return false
+  }
+  
+  if (!data) {
+    console.error('❌ Produto não encontrado na tabela lastlink_products:', productId)
+    return false
+  }
+  
+  console.log('✅ Produto encontrado na tabela lastlink_products:', data)
+  return true
+}
+
+// Função auxiliar para cadastrar um produto na tabela lastlink_products caso não exista
+async function ensureProductExists(supabase: any, productId: string, billingInterval: string = 'monthly'): Promise<boolean> {
+  console.log('🔍 Verificando se o produto existe na tabela lastlink_products:', productId)
+  
+  // Primeiro verificamos se o produto já existe
+  const { data, error } = await supabase
+    .from('lastlink_products')
+    .select('product_id')
+    .eq('product_id', productId)
+    .single()
+  
+  // Se o produto já existe, retorna true
+  if (data) {
+    console.log('✅ Produto já existe na tabela lastlink_products:', data)
+    return true
+  }
+  
+  // Se houver erro diferente de "not found", registra o erro
+  if (error && !error.message.includes('No rows found')) {
+    console.error('❌ Erro ao verificar produto:', error)
+    return false
+  }
+  
+  // Se o produto não existe, tenta cadastrá-lo
+  console.log('⚠️ Produto não encontrado. Tentando cadastrar:', productId, 'com billing_interval:', billingInterval)
+  
+  const { error: insertError } = await supabase
+    .from('lastlink_products')
+    .insert({
+      product_id: productId,
+      billing_interval: billingInterval
+    })
+  
+  if (insertError) {
+    console.error('❌ Erro ao cadastrar produto:', insertError)
+    return false
+  }
+  
+  console.log('✅ Produto cadastrado com sucesso na tabela lastlink_products:', productId)
+  return true
 }
 
 export async function POST(request: Request) {
@@ -228,7 +314,25 @@ export async function POST(request: Request) {
               productId
             })
             
+            // Agora vamos garantir que o produto exista, tentando cadastrá-lo se não existir
+            const billingInterval = payload.Data.Purchase?.Recurrency === 1 ? 'monthly' : 'annual'
+            const productEnsured = await ensureProductExists(supabase, productId, billingInterval)
+            
+            if (!productEnsured) {
+              console.error('❌ Não foi possível garantir que o produto existe na tabela lastlink_products.')
+              return NextResponse.json({ 
+                error: 'Falha ao processar o produto. Verifique os logs do servidor.' 
+              }, { status: 500 })
+            }
+            
             const periodEnd = payload.Data.Subscriptions?.[0]?.ExpiredDate || null
+            
+            console.log('📤 Enviando para RPC handle_lastlink_active com parâmetros:', {
+              p_company_id: companyId,
+              p_sub_id: subscriptionId,
+              p_product_id: productId,
+              p_period_end: periodEnd
+            })
             
             const { data, error } = await supabase.rpc('handle_lastlink_active', {
               p_company_id: companyId,
@@ -236,6 +340,12 @@ export async function POST(request: Request) {
               p_product_id: productId,
               p_period_end: periodEnd
             })
+            
+            if (error) {
+              console.error('❌ Erro na chamada RPC handle_lastlink_active:', error)
+            } else {
+              console.log('✅ RPC handle_lastlink_active executada com sucesso')
+            }
             
             result = { data, error }
           } else {
