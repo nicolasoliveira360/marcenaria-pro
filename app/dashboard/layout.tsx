@@ -10,6 +10,7 @@ import { Logo } from "@/components/logo"
 import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import CompanyProvider from "@/contexts/company-provider"
+import SupabaseProvider from "@/contexts/supabase-provider"
 
 // Definir o tipo de enum para funções de usuário
 type RoleEnum = "admin" | "collaborator" | "client_viewer"
@@ -57,11 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         if (user) {
           // Buscar dados do usuário no banco
-          const { data: userData } = await supabase
-            .from("users" as any)
-            .select("*")
-            .eq("id", user.id)
-            .single()
+          const { data: userData } = await supabase.from("users").select("*").eq("id", user.id).single()
 
           if (userData) {
             setUser(userData)
@@ -71,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const { data: companyData } = await supabase
               .from("companies")
               .select("id")
-              .eq("email", (userData as any).email)
+              .eq("email", userData.email)
               .single()
 
             if (companyData) {
@@ -247,9 +244,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Main content area */}
           <main className="flex-1 overflow-y-auto p-6">
-            <CompanyProvider>
-              {children}
-            </CompanyProvider>
+            <SupabaseProvider>
+              <CompanyProvider>
+                {children}
+              </CompanyProvider>
+            </SupabaseProvider>
           </main>
         </div>
       </div>

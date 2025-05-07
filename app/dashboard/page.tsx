@@ -25,7 +25,6 @@ import { useCompany } from "@/hooks/use-company"
 import { getProjects } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Building } from "lucide-react"
-import { SubscriptionInfo } from '@/components/subscription-info'
 
 // Tipo para projetos
 type Project = {
@@ -85,7 +84,7 @@ export default function Dashboard() {
   const [upcomingPayments, setUpcomingPayments] = useState<Payment[]>([])
   const [loadingProjects, setLoadingProjects] = useState(true)
   const [projectStatusSummary, setProjectStatusSummary] = useState<ProjectStatusSummary[]>([])
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("this_month")
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all")
 
   // Adicionar função para calcular datas de início e fim com base no período
   const getDateRangeFromPeriod = (period: PeriodFilter): { startDate: string; endDate: string } => {
@@ -818,24 +817,269 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">Painel de Controle</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          {/* Outros componentes do painel */}
-          <div className="border rounded-lg p-4">
-            <h2 className="text-lg font-medium mb-4">Projetos recentes</h2>
-            <p className="text-gray-500">Seus projetos aparecerão aqui...</p>
-          </div>
-        </div>
-        
-        <div className="space-y-6">
-          <SubscriptionInfo />
-          
-          {/* Outros cards laterais */}
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-[#0f172a]">Dashboard</h1>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
+          <Select value={periodFilter} onValueChange={(value) => setPeriodFilter(value as PeriodFilter)}>
+            <SelectTrigger className="w-full md:w-[180px] border-[#e5e7eb] focus:ring-[#70645C] focus:ring-opacity-20">
+              <SelectValue placeholder="Selecione o período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="this_month">Este mês</SelectItem>
+              <SelectItem value="last_month">Mês passado</SelectItem>
+              <SelectItem value="this_quarter">Este trimestre</SelectItem>
+              <SelectItem value="last_quarter">Trimestre passado</SelectItem>
+              <SelectItem value="this_year">Este ano</SelectItem>
+              <SelectItem value="all">Todo o período</SelectItem>
+            </SelectContent>
+          </Select>
+          <Card className="bg-[#70645C] text-white border-none w-full md:w-auto">
+            <CardContent className="flex items-center justify-center p-2">
+              <Calendar size={14} className="mr-1" /> {new Date().toLocaleDateString("pt-BR")}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {loadingProjects ? (
+        renderSkeleton()
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <Card className="border border-[#e5e7eb] hover:shadow-md transition-shadow duration-300 ease-in-out bg-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-[#475569]">Total de Clientes</CardTitle>
+                <Users size={18} className="text-[#70645C]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#0f172a]">{stats.totalClients}</div>
+                <p className="text-xs text-[#475569] mt-1">Clientes cadastrados</p>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <Link href="/dashboard/clientes" className="text-xs text-[#70645C] hover:underline flex items-center transition-colors duration-300 ease-in-out">
+                  Ver todos <ArrowRight size={12} className="ml-1" />
+                </Link>
+              </CardFooter>
+            </Card>
+
+            <Card className="border border-[#e5e7eb] hover:shadow-md transition-shadow duration-300 ease-in-out bg-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-[#475569]">Projetos</CardTitle>
+                <FolderOpen size={18} className="text-[#70645C]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#0f172a]">{stats.totalProjects}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="text-xs text-[#16a34a] flex items-center">
+                    <CheckCircle2 size={12} className="mr-1" /> {stats.completedProjects} concluídos
+                  </div>
+                  <div className="text-xs text-blue-600 flex items-center">
+                    <LucideActivity size={12} className="mr-1" /> {stats.totalProjects - stats.completedProjects} em
+                    andamento
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <Link href="/dashboard/projetos" className="text-xs text-[#70645C] hover:underline flex items-center transition-colors duration-300 ease-in-out">
+                  Ver todos <ArrowRight size={12} className="ml-1" />
+                </Link>
+              </CardFooter>
+            </Card>
+
+            <Card className="border border-[#e5e7eb] hover:shadow-md transition-shadow duration-300 ease-in-out bg-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-[#475569]">Valor Total</CardTitle>
+                <BarChart3 size={18} className="text-[#70645C]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#0f172a]">{formatCurrency(stats.totalValue)}</div>
+                <p className="text-xs text-[#475569] mt-1">Valor total dos projetos</p>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <div className="text-xs text-[#70645C] flex items-center">
+                  <DollarSign size={12} className="mr-1" /> Média:{" "}
+                  {formatCurrency(stats.totalProjects > 0 ? stats.totalValue / stats.totalProjects : 0)}
+                </div>
+              </CardFooter>
+            </Card>
+
+            <Card className="border border-[#e5e7eb] hover:shadow-md transition-shadow duration-300 ease-in-out bg-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-[#475569]">Pagamentos Pendentes</CardTitle>
+                <Clock size={18} className="text-[#70645C]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#0f172a]">{formatCurrency(stats.pendingPayments)}</div>
+                <p className="text-xs text-[#475569] mt-1">Valores a receber</p>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <div className="text-xs text-yellow-600 flex items-center">
+                  <AlertCircle size={12} className="mr-1" /> {upcomingPayments.length} pagamentos próximos
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <Card className="border border-[#e5e7eb] bg-white">
+              <CardHeader className="pb-2 bg-[#70645C]/10 border-b border-[#e5e7eb]">
+                <CardTitle className="text-[#70645C] flex items-center text-lg font-medium">
+                  <FolderOpen size={18} className="mr-2" /> Projetos Recentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 p-6">
+                {recentProjects.length > 0 ? (
+                  recentProjects.map((project) => (
+                    <div key={project.id} className="border-b border-[#e5e7eb] pb-3 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <Link
+                          href={`/dashboard/projetos/${project.id}`}
+                          className="font-medium text-[#0f172a] hover:text-[#70645C] hover:underline transition-colors duration-300 ease-in-out"
+                        >
+                          {project.name}
+                        </Link>
+                        {getStatusBadge(project.status_name)}
+                      </div>
+                      <div className="text-sm text-[#475569] mb-1">
+                        Cliente: {project.client_name || "Sem cliente"} • {formatCurrency(project.total_value)}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-xs text-[#475569]">
+                          <span>Progresso: {project.progress}%</span>
+                        </div>
+                      </div>
+                      <Progress value={project.progress} className="h-1 mt-2" />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-[#475569]">Nenhum projeto encontrado</div>
+                )}
+              </CardContent>
+              <CardFooter className="pt-0 pb-4 px-6">
+                <Link href="/dashboard/projetos" className="text-sm text-[#70645C] hover:underline flex items-center transition-colors duration-300 ease-in-out">
+                  Ver todos os projetos <ArrowRight size={14} className="ml-1" />
+                </Link>
+              </CardFooter>
+            </Card>
+
+            <Tabs defaultValue="tasks" className="w-full">
+              <CardHeader className="pb-0 pt-4 px-4 bg-[#70645C]/10 border-b border-[#e5e7eb]">
+                <div className="flex justify-between items-center">
+                  <TabsList className="grid w-full grid-cols-2 h-9">
+                    <TabsTrigger value="tasks" className="text-xs">
+                      <Clock size={14} className="mr-1" /> Tarefas Pendentes
+                    </TabsTrigger>
+                    <TabsTrigger value="payments" className="text-xs">
+                      <DollarSign size={14} className="mr-1" /> Próximos Pagamentos
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </CardHeader>
+
+              <TabsContent value="tasks" className="mt-0">
+                <Card className="border-0 shadow-none bg-white">
+                  <CardContent className="space-y-4 pt-4 p-6">
+                    {pendingTasks.length > 0 ? (
+                      pendingTasks.map((task) => (
+                        <div key={task.id} className="border-b border-[#e5e7eb] pb-3 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-[#0f172a]">{task.name}</div>
+                              <Link
+                                href={`/dashboard/projetos/${task.project_id}`}
+                                className="text-sm text-[#475569] hover:text-[#70645C] hover:underline transition-colors duration-300 ease-in-out"
+                              >
+                                {task.project_name} • {task.status_name}
+                              </Link>
+                            </div>
+                            <Badge className="bg-yellow-100 text-yellow-600 border-yellow-200">Pendente</Badge>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-[#475569]">Nenhuma tarefa pendente</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="payments" className="mt-0">
+                <Card className="border-0 shadow-none bg-white">
+                  <CardContent className="space-y-4 pt-4 p-6">
+                    {upcomingPayments.length > 0 ? (
+                      upcomingPayments.map((payment) => (
+                        <div key={payment.id} className="border-b border-[#e5e7eb] pb-3 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-[#0f172a]">{formatCurrency(payment.amount)}</div>
+                              <Link
+                                href={`/dashboard/projetos/${payment.project_id}`}
+                                className="text-sm text-[#475569] hover:text-[#70645C] hover:underline transition-colors duration-300 ease-in-out"
+                              >
+                                {payment.project_name}
+                              </Link>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-[#0f172a]">{formatDate(payment.due_date)}</div>
+                              {payment.due_date && renderDaysRemaining(payment.due_date)}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-[#475569]">Nenhum pagamento próximo</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <Card className="border border-[#e5e7eb] bg-white">
+              <CardHeader className="pb-2 bg-[#70645C]/10 border-b border-[#e5e7eb]">
+                <CardTitle className="text-[#70645C] flex items-center text-lg font-medium">
+                  <BarChart3 size={18} className="mr-2" /> Resumo de Projetos por Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {projectStatusSummary.length > 0 ? (
+                  <div className="space-y-4">
+                    {projectStatusSummary.map((item) => (
+                      <div key={item.status} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="capitalize text-[#0f172a]">{item.status.replace(/_/g, " ")}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-40 bg-[#f9fafb] rounded-full h-2.5">
+                            <div
+                              className="h-2.5 rounded-full"
+                              style={{
+                                width: `${(item.count / stats.totalProjects) * 100}%`,
+                                backgroundColor: item.color,
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-[#0f172a]">{item.count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-[#475569]">Nenhum projeto encontrado</div>
+                )}
+              </CardContent>
+              <CardFooter className="pt-0 pb-4 px-6">
+                <Link href="/dashboard/projetos" className="text-sm text-[#70645C] hover:underline flex items-center transition-colors duration-300 ease-in-out">
+                  Gerenciar projetos <ArrowRight size={14} className="ml-1" />
+                </Link>
+              </CardFooter>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   )
 }
