@@ -66,6 +66,7 @@ BEGIN
     plan = v_plan,
     billing_interval = v_interval,
     lastlink_status = 'active',
+    lastlink_sub_id = p_sub_id,
     current_period_end = p_period_end,
     updated_at = NOW()
   WHERE id = p_company_id;
@@ -117,6 +118,7 @@ BEGIN
   UPDATE companies
   SET 
     lastlink_status = 'past_due',
+    lastlink_sub_id = p_sub_id,
     current_period_end = p_period_end,
     updated_at = NOW()
   WHERE id = p_company_id;
@@ -161,7 +163,9 @@ BEGIN
   -- Atualizar status na empresa
   UPDATE companies
   SET 
+    plan = 'free',
     lastlink_status = 'canceled',
+    lastlink_sub_id = p_sub_id,
     current_period_end = p_period_end,
     updated_at = NOW()
   WHERE id = p_company_id;
@@ -208,6 +212,7 @@ BEGIN
   SET 
     plan = 'free',
     lastlink_status = 'expired',
+    lastlink_sub_id = p_sub_id,
     current_period_end = p_period_end,
     updated_at = NOW()
   WHERE id = p_company_id;

@@ -953,7 +953,7 @@ export default function ColaboradoresPage() {
                       formErrors.password ? "border-red-500" : ""
                     }`}
                     disabled={generateRandomPassword}
-                  />
+                    />
                 )}
                 {formErrors.password && <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>}
               </div>
@@ -1038,7 +1038,7 @@ export default function ColaboradoresPage() {
                     ? "bg-[#70645C] hover:bg-[#70645C]/90 text-white"
                     : "border-gray-200 hover:border-[#70645C] hover:text-[#70645C]"
                 }
-              >
+                >
                 <Shield className="h-4 w-4 mr-2" />
                 Admin
               </Button>
