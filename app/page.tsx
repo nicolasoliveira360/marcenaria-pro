@@ -44,7 +44,7 @@ function Navbar() {
         {/* Menu Mobile Overlay */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 bg-black/40 flex justify-end sm:hidden">
-            <div className="w-3/4 max-w-xs bg-white h-full shadow-lg flex flex-col p-6 gap-4 animate-slideInRight">
+            <div className="w-3/4 max-w-xs bg-white h-full shadow-lg flex flex-col p-6 gap-4 animate-slideInRight" style={{backgroundColor: '#fff'}}>
               <button
                 className="self-end mb-2 p-2 rounded-md text-[#70645C] hover:bg-[#70645C]/10 focus:outline-none"
                 onClick={() => setMobileOpen(false)}

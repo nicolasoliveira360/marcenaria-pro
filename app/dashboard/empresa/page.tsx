@@ -331,15 +331,17 @@ export default function EmpresaPage() {
       // Criar nome único para o arquivo
       const fileExt = logoFile.name.split(".").pop()
       const fileName = `${company.id}-${Date.now()}.${fileExt}`
-      const filePath = `company-logos/${fileName}`
+      const filePath = `${fileName}`
 
-      // Fazer upload para o storage
-      const { error: uploadError } = await supabase.storage.from("public").upload(filePath, logoFile)
+      // Fazer upload para o bucket correto
+      const { error: uploadError } = await supabase.storage.from("company-logos").upload(filePath, logoFile, {
+        upsert: true,
+      })
 
       if (uploadError) throw uploadError
 
       // Obter URL pública
-      const { data } = supabase.storage.from("public").getPublicUrl(filePath)
+      const { data } = supabase.storage.from("company-logos").getPublicUrl(filePath)
 
       return data.publicUrl
     } catch (error) {
