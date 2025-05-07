@@ -11,6 +11,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
 import CompanyProvider from "@/contexts/company-provider"
 import SupabaseProvider from "@/contexts/supabase-provider"
+import { CrudGuardProvider } from "@/contexts/crud-guard-provider"
+import { GlobalCrudProtection } from "@/components/global-crud-protection"
 
 // Definir o tipo de enum para funções de usuário
 type RoleEnum = "admin" | "collaborator" | "client_viewer"
@@ -246,7 +248,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <main className="flex-1 overflow-y-auto p-6">
             <SupabaseProvider>
               <CompanyProvider>
-                {children}
+                <CrudGuardProvider>
+                  <GlobalCrudProtection>
+                    {children}
+                  </GlobalCrudProtection>
+                </CrudGuardProvider>
               </CompanyProvider>
             </SupabaseProvider>
           </main>

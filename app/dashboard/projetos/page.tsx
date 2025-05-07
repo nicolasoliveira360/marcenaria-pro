@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/lib/supabase/database.types"
+import { ProtectedCrudButton } from "@/components/protected-crud-button"
 
 type Project = Database["public"]["Tables"]["projects"]["Row"]
 type Client = Database["public"]["Tables"]["clients"]["Row"]
@@ -300,12 +301,14 @@ export default function ProjetosPage() {
           <h1 className="text-3xl font-bold text-gray-900">Projetos</h1>
           <p className="text-gray-500 mt-1">Gerencie todos os seus projetos em um só lugar</p>
         </div>
-        <Button
-          onClick={() => router.push("/dashboard/projetos/novo")}
+        <ProtectedCrudButton
+          onClickAction={() => router.push("/dashboard/projetos/novo")}
           className="bg-[#70645C] hover:bg-[#5d534c] text-white text-sm px-4 py-2 h-10 rounded-md flex items-center justify-center gap-2 transition-colors duration-300"
+          icon={<Plus size={16} />}
+          fallbackText="Novo Projeto"
         >
-          <Plus size={16} /> Novo Projeto
-        </Button>
+          Novo Projeto
+        </ProtectedCrudButton>
       </div>
 
       {/* Barra de busca e filtros */}
@@ -503,12 +506,14 @@ export default function ProjetosPage() {
                 <X size={16} className="mr-2" /> Limpar filtros
               </Button>
             ) : null}
-            <Button
-              onClick={() => router.push("/dashboard/projetos/novo")}
+            <ProtectedCrudButton
+              onClickAction={() => router.push("/dashboard/projetos/novo")}
               className="bg-[#70645C] hover:bg-[#5d534c] text-white text-sm px-4 py-2 h-10 rounded-md flex items-center justify-center gap-2 transition-colors duration-300"
+              icon={<Plus size={16} />}
+              fallbackText="Novo Projeto"
             >
-              <Plus size={16} /> Novo Projeto
-            </Button>
+              Novo Projeto
+            </ProtectedCrudButton>
           </div>
         </div>
       ) : (

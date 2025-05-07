@@ -46,8 +46,10 @@ import {
   Trash,
   User,
   X,
+  Lock,
 } from "lucide-react"
 import { getClientWithCompany } from "@/lib/supabase/client-utils"
+import { useCrudGuard } from "@/contexts/crud-guard-provider"
 
 // Atualizar o tipo Cliente para usar a tabela correta
 type Cliente = Database["public"]["Tables"]["clients"]["Row"]
@@ -80,6 +82,7 @@ export default function ClientesPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [uniqueCities, setUniqueCities] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { executeCrudOperation, canPerformCrud } = useCrudGuard()
 
   useEffect(() => {
     async function initialize() {
@@ -367,11 +370,21 @@ export default function ClientesPage() {
           </div>
 
           <Button 
-            onClick={handleAddNew} 
-            className="bg-[#70645C] hover:bg-[#5d534c] text-white transition-colors duration-300 ease-in-out"
+            className={`bg-[#70645C] hover:bg-[#5d534c] text-white transition-colors duration-300 ease-in-out ${!canPerformCrud ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => executeCrudOperation(() => setOpenDialog(true))}
+            disabled={!canPerformCrud}
           >
-            <Plus size={18} className="mr-2" />
-            Novo Cliente
+            {canPerformCrud ? (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Cliente
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4 mr-2" />
+                Recurso Premium
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -556,7 +569,8 @@ export default function ClientesPage() {
                           <p>Nenhum cliente cadastrado ainda.</p>
                           <Button 
                             variant="link" 
-                            onClick={handleAddNew} 
+                            onClick={() => executeCrudOperation(() => setOpenDialog(true))}
+                            disabled={!canPerformCrud}
                             className="text-[#70645C] mt-1 hover:text-[#5d534c] transition-colors duration-300 ease-in-out"
                           >
                             Adicionar seu primeiro cliente
@@ -669,7 +683,8 @@ export default function ClientesPage() {
                   <p className="text-lg">Nenhum cliente cadastrado ainda.</p>
                   <Button 
                     variant="link" 
-                    onClick={handleAddNew} 
+                    onClick={() => executeCrudOperation(() => setOpenDialog(true))}
+                    disabled={!canPerformCrud}
                     className="text-[#70645C] mt-2 hover:text-[#5d534c] transition-colors duration-300 ease-in-out"
                   >
                     Adicionar seu primeiro cliente

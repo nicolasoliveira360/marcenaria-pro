@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Pencil, User } from "lucide-react"
 import type { Project, Client } from "../utils/types"
 import { formatPaymentStatus, getPaymentStatusColor } from "../utils/formatters"
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
+import { ProtectedCrudButton } from "@/components/protected-crud-button"
 
 interface ProjectHeaderProps {
   project: Partial<Project>
@@ -81,19 +82,16 @@ export function ProjectHeader({
             {formatPaymentStatus(project.payment_status || "pendente")}
           </Badge>
         )}
-        <Button
-          onClick={handleSaveProject}
+        <ProtectedCrudButton
+          onClickAction={handleSaveProject}
           disabled={saving}
+          variant="default"
+          fallbackText={saving ? "Salvando..." : "Plano Premium necessário"}
           className="bg-[#70645C] hover:bg-[#5d534c] text-white text-sm px-4 py-2 h-10 rounded-md flex items-center justify-center gap-2 transition-colors duration-300 w-full sm:w-auto"
+          icon={<Save size={16} />}
         >
-          {saving ? (
-            <>Salvando...</>
-          ) : (
-            <>
-              <Save size={16} className="mr-2" /> Salvar
-            </>
-          )}
-        </Button>
+          {saving ? "Salvando..." : "Salvar"}
+        </ProtectedCrudButton>
       </div>
     </div>
   )

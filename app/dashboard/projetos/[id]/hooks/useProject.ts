@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import type { Project, Client } from "../utils/types"
+import { useCrudGuard } from "@/contexts/crud-guard-provider"
 
 export function useProject(projectId: string, isNewProject: boolean) {
   const router = useRouter()
@@ -15,17 +16,21 @@ export function useProject(projectId: string, isNewProject: boolean) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
+  const { executeCrudOperation } = useCrudGuard()
 
-  const [project, setProject] = useState<Partial<Project>>({
+  const [project, setProject] = useState<Partial<Project> & { progress_status_id?: string | null }>({
     name: "",
     client_id: "",
     description: "",
-    total_value: 0,
+    total_value: null,
     payment_status: "pendente",
     progress_status_id: null,
     slug: "",
     password_hash: "",
   })
+  
+  // Usado para armazenar o valor bruto digitado pelo usuário
+  const [rawTotalValue, setRawTotalValue] = useState<string>("")
 
   useEffect(() => {
     const initializeClient = async () => {
@@ -125,11 +130,44 @@ export function useProject(projectId: string, isNewProject: boolean) {
     const { name, value } = e.target
 
     if (name === "total_value") {
-      // Remover caracteres não numéricos e converter para número
-      const numericValue = value.replace(/[^\d,]/g, "").replace(",", ".")
-      setProject((prev) => ({ ...prev, [name]: numericValue ? Number.parseFloat(numericValue) : 0 }))
+      // Armazena o valor bruto digitado
+      setRawTotalValue(value)
+      
+      // Se o campo estiver vazio, definir como null
+      if (value === "" || value === null || value === undefined) {
+        setProject((prev) => ({ ...prev, total_value: null }))
+        return
+      }
+      
+      // Remove todos os caracteres não numéricos, exceto vírgula e ponto
+      const numericString = value.replace(/[^\d,.]/g, "")
+      
+      // Se ainda tiver algum valor após a limpeza
+      if (numericString) {
+        // Para conversão para número, substitui vírgula por ponto
+        const sanitizedValue = numericString.replace(/\./g, "").replace(",", ".")
+        const numericValue = parseFloat(sanitizedValue)
+        
+        // Só atualiza se for um número válido
+        if (!isNaN(numericValue)) {
+          setProject((prev) => ({ ...prev, total_value: numericValue }))
+        }
+      } else {
+        setProject((prev) => ({ ...prev, total_value: null }))
+      }
     } else {
       setProject((prev) => ({ ...prev, [name]: value }))
+    }
+  }
+  
+  // Manipulador para quando o campo perde o foco
+  const handleTotalValueBlur = () => {
+    if (project.total_value !== null && project.total_value !== undefined) {
+      // Atualiza o valor bruto com a formatação completa
+      setRawTotalValue(new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(project.total_value))
     }
   }
 
@@ -143,6 +181,7 @@ export function useProject(projectId: string, isNewProject: boolean) {
 
       if (!project.name || !project.client_id) {
         alert("Nome do projeto e cliente são obrigatórios.")
+        setSaving(false)
         return
       }
 
@@ -150,109 +189,115 @@ export function useProject(projectId: string, isNewProject: boolean) {
         throw new Error("Não foi possível determinar a empresa do usuário")
       }
 
-      // Remover o slug se estiver vazio para evitar problemas de unicidade
-      const projectData = {
-        ...project,
-        company_id: companyId,
-      }
-
-      // Se o slug estiver vazio, remova-o para que o banco de dados não tente inserir uma string vazia
-      if (!projectData.slug) {
-        delete projectData.slug
-      }
-
-      if (isNewProject) {
-        // Criar novo projeto
-        const { data, error } = await supabase.from("projects").insert(projectData).select()
-
-        if (error) throw error
-        if (data && data[0]) {
-          const newProjectId = data[0].id
-
-          // Buscar status macro configurados para a empresa
-          const { data: macroStatuses, error: macroStatusError } = await supabase
-            .from("macro_status")
-            .select("*")
-            .eq("company_id", companyId)
-            .order("position")
-
-          if (!macroStatusError && macroStatuses && macroStatuses.length > 0) {
-            // Criar status de projeto baseado nos status macro
-            const projectStatusPromises = macroStatuses.map(async (macroStatus) => {
-              // Inserir status do projeto
-              const { data: projectStatus, error: statusError } = await supabase
-                .from("project_status")
-                .insert({
-                  project_id: newProjectId,
-                  name: macroStatus.name,
-                  position: macroStatus.position,
-                })
-                .select()
-                .single()
-
-              if (statusError || !projectStatus) {
-                console.error("Erro ao criar status do projeto:", statusError)
-                return null
-              }
-
-              // Buscar tarefas padrão para este status macro
-              const { data: macroTasks, error: tasksError } = await supabase
-                .from("macro_status_task")
-                .select("*")
-                .eq("macro_status_id", macroStatus.id)
-                .order("position")
-
-              if (tasksError || !macroTasks) {
-                console.error("Erro ao buscar tarefas padrão:", tasksError)
-                return projectStatus
-              }
-
-              // Criar tarefas do projeto baseadas nas tarefas padrão
-              for (const task of macroTasks) {
-                await supabase.from("project_task").insert({
-                  project_status_id: projectStatus.id,
-                  name: task.name,
-                  position: task.position,
-                  is_done: false,
-                })
-              }
-
-              return projectStatus
-            })
-
-            await Promise.all(projectStatusPromises)
-          } else {
-            // Se não houver status macro configurados, criar status padrão
-            const defaultStatuses = [
-              { name: "A Fazer", position: 1 },
-              { name: "Em Andamento", position: 2 },
-              { name: "Concluído", position: 3 },
-            ]
-
-            for (const status of defaultStatuses) {
-              await supabase.from("project_status").insert({
-                project_id: newProjectId,
-                name: status.name,
-                position: status.position,
-              })
-            }
-          }
-
-          router.push(`/dashboard/projetos/${newProjectId}`)
+      // Usar o executeCrudOperation para verificar se tem permissão para salvar
+      await executeCrudOperation(async () => {
+        // Remover o slug se estiver vazio para evitar problemas de unicidade
+        const projectData = {
+          ...project,
+          company_id: companyId,
         }
-      } else {
-        // Atualizar projeto existente
-        const { error } = await supabase
-          .from("projects")
-          .update(projectData)
-          .eq("id", projectId)
-          .eq("company_id", companyId)
 
-        if (error) throw error
+        // Se o slug estiver vazio, remova-o para que o banco de dados não tente inserir uma string vazia
+        if (!projectData.slug) {
+          delete projectData.slug
+        }
 
-        // Recarregar dados do projeto
-        await fetchProjectData()
-      }
+        if (isNewProject) {
+          // Criar novo projeto
+          const { data, error } = await supabase.from("projects").insert(projectData).select()
+
+          if (error) throw error
+          if (data && data[0]) {
+            const newProjectId = data[0].id
+
+            // Buscar status macro configurados para a empresa
+            const { data: macroStatuses, error: macroStatusError } = await supabase
+              .from("macro_status")
+              .select("*")
+              .eq("company_id", companyId)
+              .order("position")
+
+            if (!macroStatusError && macroStatuses && macroStatuses.length > 0) {
+              // Criar status de projeto baseado nos status macro
+              const projectStatusPromises = macroStatuses.map(async (macroStatus) => {
+                // Inserir status do projeto
+                const { data: projectStatus, error: statusError } = await supabase
+                  .from("project_status")
+                  .insert({
+                    project_id: newProjectId,
+                    name: macroStatus.name,
+                    position: macroStatus.position,
+                  })
+                  .select()
+                  .single()
+
+                if (statusError || !projectStatus) {
+                  console.error("Erro ao criar status do projeto:", statusError)
+                  return null
+                }
+
+                // Buscar tarefas padrão para este status macro
+                const { data: macroTasks, error: tasksError } = await supabase
+                  .from("macro_status_task")
+                  .select("*")
+                  .eq("macro_status_id", macroStatus.id)
+                  .order("position")
+
+                if (tasksError || !macroTasks) {
+                  console.error("Erro ao buscar tarefas padrão:", tasksError)
+                  return projectStatus
+                }
+
+                // Criar tarefas do projeto baseadas nas tarefas padrão
+                for (const task of macroTasks) {
+                  await supabase.from("project_task").insert({
+                    project_status_id: projectStatus.id,
+                    name: task.name,
+                    position: task.position,
+                    is_done: false,
+                  })
+                }
+
+                return projectStatus
+              })
+
+              await Promise.all(projectStatusPromises)
+            } else {
+              // Se não houver status macro configurados, criar status padrão
+              const defaultStatuses = [
+                { name: "A Fazer", position: 1 },
+                { name: "Em Andamento", position: 2 },
+                { name: "Concluído", position: 3 },
+              ]
+
+              for (const status of defaultStatuses) {
+                await supabase.from("project_status").insert({
+                  project_id: newProjectId,
+                  name: status.name,
+                  position: status.position,
+                })
+              }
+            }
+
+            router.push(`/dashboard/projetos/${newProjectId}`)
+          }
+        } else {
+          // Atualizar projeto existente
+          const { error } = await supabase
+            .from("projects")
+            .update(projectData)
+            .eq("id", projectId)
+            .eq("company_id", companyId)
+
+          if (error) throw error
+
+          // Recarregar dados do projeto
+          await fetchProjectData()
+        }
+      }, { 
+        operationType: isNewProject ? 'create' : 'update',
+        featureName: isNewProject ? 'criar novo projeto' : 'atualizar projeto'
+      })
     } catch (error) {
       console.error("Erro ao salvar projeto:", error)
       alert("Erro ao salvar projeto: " + (error instanceof Error ? error.message : "Erro desconhecido"))
@@ -312,5 +357,7 @@ export function useProject(projectId: string, isNewProject: boolean) {
     handleDeleteProject,
     handleGenerateSlug,
     handleGeneratePassword,
+    rawTotalValue,
+    handleTotalValueBlur
   }
 }

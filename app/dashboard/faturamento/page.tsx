@@ -275,29 +275,14 @@ export default function FaturamentoPage() {
                   <div className="border border-[#e5e7eb] rounded-lg p-5">
                     <h3 className="text-lg font-medium mb-3 flex items-center text-gray-900">
                       <CreditCard size={18} className="mr-2 text-[#70645C]" />
-                      Plano Gratuito
+                      Planos Disponíveis
                     </h3>
                     <p className="text-gray-700 mb-4">
-                      O plano gratuito inclui recursos básicos para gerenciamento de projetos com algumas limitações:
+                      Escolha o plano que melhor se adapta às necessidades do seu negócio:
                     </p>
                     
-                    <ul className="space-y-2 mb-6">
-                      <li className="flex items-start">
-                        <Check size={18} className="text-[#16a34a] mr-2 mt-0.5" />
-                        <span className="text-gray-700">Até 3 projetos ativos</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check size={18} className="text-[#16a34a] mr-2 mt-0.5" />
-                        <span className="text-gray-700">Espaço de armazenamento limitado (100MB)</span>
-                      </li>
-                      <li className="flex items-start">
-                        <Check size={18} className="text-[#16a34a] mr-2 mt-0.5" />
-                        <span className="text-gray-700">Funcionalidades básicas de gerenciamento</span>
-                      </li>
-                    </ul>
-                    
                     <div className="bg-[#70645C]/10 p-4 rounded-lg mb-6">
-                      <h4 className="font-medium text-[#70645C] mb-2">Por que fazer upgrade?</h4>
+                      <h4 className="font-medium text-[#70645C] mb-2">Benefícios do plano premium</h4>
                       <p className="text-gray-700 text-sm mb-3">
                         Com o plano premium, você ganha acesso a:
                       </p>
@@ -453,7 +438,7 @@ export default function FaturamentoPage() {
                 <div>
                   <h3 className="font-medium text-gray-900 mb-1">O que acontece com meus dados se eu cancelar?</h3>
                   <p className="text-gray-500 text-sm">
-                    Se você cancelar sua assinatura, seus dados permanecerão disponíveis por 30 dias. Após esse período, sua conta retornará ao plano gratuito com limitações.
+                    Se você cancelar sua assinatura, seus dados permanecerão disponíveis por 30 dias. Após esse período, sua conta ficará inativa até que você reative a assinatura.
                   </p>
                 </div>
                 <div>

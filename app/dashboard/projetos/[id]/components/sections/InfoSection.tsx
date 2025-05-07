@@ -9,10 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Info, FileText, Layers, CreditCard, ListTodo, FileIcon } from "lucide-react"
 import type { Project, Client, ProjectStatus } from "../../utils/types"
-import { formatCurrency } from "../../utils/formatters"
 
 interface InfoSectionProps {
-  project: Partial<Project>
+  project: Partial<Project> & { progress_status_id?: string | null }
   clients: Client[]
   statusColumns: ProjectStatus[]
   tasks: any[]
@@ -20,6 +19,8 @@ interface InfoSectionProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   handleSelectChange: (name: string, value: string) => void
   isNewProject: boolean
+  rawTotalValue?: string
+  handleTotalValueBlur?: () => void
 }
 
 export function InfoSection({
@@ -31,6 +32,8 @@ export function InfoSection({
   handleInputChange,
   handleSelectChange,
   isNewProject,
+  rawTotalValue,
+  handleTotalValueBlur
 }: InfoSectionProps) {
   return (
     <div className="space-y-6">
@@ -86,16 +89,30 @@ export function InfoSection({
 
               <div className="space-y-2">
                 <Label htmlFor="total_value" className="text-gray-700 text-sm font-medium">Valor Total do Projeto</Label>
-                <Input
-                  id="total_value"
-                  name="total_value"
-                  value={project.total_value !== null ? formatCurrency(project.total_value) : ""}
-                  onChange={handleInputChange}
-                  placeholder="R$ 0,00"
-                  className="h-10 border-gray-200 focus:border-[#70645C] focus:ring focus:ring-[#70645C] focus:ring-opacity-20"
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                  <Input
+                    id="total_value"
+                    name="total_value"
+                    value={rawTotalValue !== undefined ? rawTotalValue : (
+                      project.total_value !== null && project.total_value !== undefined 
+                        ? new Intl.NumberFormat('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          }).format(project.total_value)
+                        : ""
+                    )}
+                    onChange={handleInputChange}
+                    onBlur={handleTotalValueBlur}
+                    placeholder="0,00"
+                    className="h-10 pl-8 border-gray-200 focus:border-[#70645C] focus:ring focus:ring-[#70645C] focus:ring-opacity-20"
+                    inputMode="numeric"
+                    aria-label="Valor em reais"
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
                 <p className="text-xs text-gray-500">
-                  Este valor será atualizado automaticamente com base nas parcelas adicionadas.
+                  Digite o valor total do projeto.
                 </p>
               </div>
             </div>
@@ -183,7 +200,14 @@ export function InfoSection({
                   <h3 className="text-sm font-medium text-gray-500">Valor Total</h3>
                   <CreditCard size={16} className="text-[#70645C]" />
                 </div>
-                <p className="text-lg font-semibold text-gray-900">{formatCurrency(project.total_value || 0)}</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {project.total_value !== null && project.total_value !== undefined 
+                    ? `R$ ${new Intl.NumberFormat('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      }).format(project.total_value)}`
+                    : "R$ 0,00"}
+                </p>
               </div>
 
               <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">

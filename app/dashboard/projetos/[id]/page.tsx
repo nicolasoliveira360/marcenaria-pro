@@ -57,6 +57,8 @@ export default function ProjetoDetalhesPage() {
     handleDeleteProject,
     handleGenerateSlug,
     handleGeneratePassword,
+    rawTotalValue,
+    handleTotalValueBlur
   } = useProject(projectId, isNewProject)
 
   const { statusColumns, selectedStatusId, setSelectedStatusId, newStatusName, setNewStatusName, handleAddStatus } =
@@ -128,6 +130,8 @@ export default function ProjetoDetalhesPage() {
             handleInputChange={handleInputChange}
             handleSelectChange={handleSelectChange}
             isNewProject={isNewProject}
+            rawTotalValue={rawTotalValue}
+            handleTotalValueBlur={handleTotalValueBlur}
           />
         )
       case "tasks":
