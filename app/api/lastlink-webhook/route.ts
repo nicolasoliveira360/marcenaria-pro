@@ -320,7 +320,7 @@ export async function POST(request: Request) {
         event_type: lastlinkEvent,
         company_id: companyId,
         subscription_id: subscriptionId,
-        data: payload
+        payload: payload
       })
       
       if (logError) {
